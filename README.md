@@ -1,57 +1,59 @@
-# TCP через reverse SSH
+**English** | [Русский](README.ru.md)
 
-Server подключается по SSH к Client. Запрос к `Client:18080` попадает в приложение на Server.
-На обоих узлах нужны Docker и Docker Compose v2.
+# TCP over reverse SSH
 
-## Настройка и запуск
+Server connects to Client over SSH. Requests to `Client:18080` reach the application on Server.
+Both hosts need Docker and Docker Compose v2.
 
-1. Скопируйте `client/` на Client, `server/` на Server.
-2. В соответствующей папке **на каждом узле** выполните:
+## Setup and startup
+
+1. Copy `client/` to Client and `server/` to Server.
+2. Run these commands in the corresponding directory **on each host**:
 
    ```bash
    cp .env-example .env
    docker compose run --rm keygen
    ```
 
-   Команда создаст ключ в `./keys` и выведет его публичную часть.
+   This creates a key in `./keys` and prints its public key.
 
-3. Заполните `.env`:
+3. Fill in `.env`:
 
-   | Файл | Переменная | Значение |
+   | File | Variable | Value |
    |---|---|---|
-   | `client/.env` | `SERVER_PUBLIC_KEY` | Публичный ключ с Server |
-   | `server/.env` | `CLIENT_HOST_PUBLIC_KEY` | Публичный ключ с Client |
-   | `server/.env` | `CLIENT_ADDRESS` | Доступный с Server DNS-адрес или IPv4 Client |
+   | `client/.env` | `SERVER_PUBLIC_KEY` | Public key from Server |
+   | `server/.env` | `CLIENT_HOST_PUBLIC_KEY` | Public key from Client |
+   | `server/.env` | `CLIENT_ADDRESS` | Client DNS name or IPv4 address reachable from Server |
 
-   Также задайте `TARGET_HOST` и `TARGET_PORT` в `server/.env` — адрес и порт вашего приложения (см. ниже).
+   Also set `TARGET_HOST` and `TARGET_PORT` in `server/.env` to your application's address and port (see below).
 
-   Ключи вставляйте целиком: `"ssh-ed25519 AAAA..."`. Приватные ключи не переносите.
+   Paste each complete public key in quotes: `"ssh-ed25519 AAAA..."`. Keep private keys on their original hosts.
 
-4. На каждом узле запустите:
+4. Start services on each host:
 
    ```bash
    docker compose up -d
    ```
 
-5. Обращайтесь к `<адрес-Client>:18080` по протоколу вашего приложения.
-   На Client должны быть доступны TCP-порт `2222` для Server и `18080` для ваших запросов.
+5. Connect to `<Client-address>:18080` using your application's protocol.
+   Client must accept connections on TCP port `2222` from Server and port `18080` from application users.
 
-## Своё приложение
+## Your application
 
-В `server/.env` задайте `TARGET_HOST` и `TARGET_PORT`:
+Set `TARGET_HOST` and `TARGET_PORT` in `server/.env`:
 
-- **Контейнер:** имя сервиса и его порт, например `backend` и `8080`.
-  Приложение и `tunnel` должны быть в общей Docker-сети.
-- **Хост Server:** `host.docker.internal` и порт приложения.
-  На Linux приложение должно слушать адрес, доступный из Docker, а не только `127.0.0.1`.
+- **Container:** service name and port, for example `backend` and `8080`.
+  The application and `tunnel` must share a Docker network.
+- **Server host:** `host.docker.internal` and the application's port.
+  On Linux, the application must listen on an address reachable from Docker, not only `127.0.0.1`.
 
-## Порты и обслуживание
+## Ports and maintenance
 
-- Внешний порт приложения: `FORWARD_PORT` в `client/.env`.
-- Доступ только с самого Client: `FORWARD_BIND_ADDRESS=127.0.0.1` (по умолчанию — все интерфейсы).
-- При смене `SSH_PORT` на Client обновите `CLIENT_SSH_PORT` на Server.
-- После изменения `.env`: `docker compose up -d`.
-- Логи: `docker compose logs -f`.
-- Остановка: `docker compose down`.
+- Published application port: `FORWARD_PORT` in `client/.env`.
+- Access from Client itself only: `FORWARD_BIND_ADDRESS=127.0.0.1` (default: all interfaces).
+- When changing `SSH_PORT` on Client, update `CLIENT_SSH_PORT` on Server.
+- After editing `.env`: `docker compose up -d`.
+- Logs: `docker compose logs -f`.
+- Stop: `docker compose down`.
 
-Ключи и состояние хранятся в папках `keys/` и `client/config/`. Не удаляйте их и не публикуйте.
+Keys and state are stored in `keys/` and `client/config/`. Do not delete or publish these directories.
