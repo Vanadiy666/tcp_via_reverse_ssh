@@ -1,0 +1,31 @@
+name: tcp-reverse-server
+
+services:
+  tunnel:
+    build: .
+    restart: unless-stopped
+    init: true
+    environment:
+      CLIENT_ADDRESS: "${CLIENT_ADDRESS:-}"
+      CLIENT_SSH_PORT: "${CLIENT_SSH_PORT:-2222}"
+      CLIENT_HOST_PUBLIC_KEY: "${CLIENT_HOST_PUBLIC_KEY:-}"
+      TARGET_HOST: "${TARGET_HOST:-host.docker.internal}"
+      TARGET_PORT: "${TARGET_PORT:-8080}"
+    volumes:
+      - ./keys:/keys:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=1m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  keygen:
+    build: .
+    profiles: [setup]
+    user: "0:0"
+    entrypoint: [/bin/sh, /usr/local/bin/keygen.sh]
+    volumes:
+      - ./keys:/keys

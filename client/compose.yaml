@@ -1,0 +1,30 @@
+name: tcp-reverse-client
+
+services:
+  sshd:
+    image: lscr.io/linuxserver/openssh-server:latest
+    restart: unless-stopped
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Etc/UTC
+      USER_NAME: tunnel
+      PASSWORD_ACCESS: "false"
+      SUDO_ACCESS: "false"
+      LOG_STDOUT: "true"
+      TUNNEL_PUBLIC_KEY: "${SERVER_PUBLIC_KEY:-}"
+    ports:
+      - "${SSH_BIND_ADDRESS:-0.0.0.0}:${SSH_PORT:-2222}:2222"
+      - "${FORWARD_BIND_ADDRESS:-0.0.0.0}:${FORWARD_PORT:-18080}:18080"
+    volumes:
+      - ./config:/config
+      - ./keys:/keys:ro
+      - ./init-tunnel.sh:/custom-cont-init.d/50-tunnel.sh:ro
+
+  keygen:
+    image: lscr.io/linuxserver/openssh-server:latest
+    profiles: [setup]
+    entrypoint: [/bin/sh, /keygen.sh]
+    volumes:
+      - ./keys:/keys
+      - ./keygen.sh:/keygen.sh:ro
